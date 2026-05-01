@@ -1,0 +1,9 @@
+build/
+dist/
+.idea/
+*.o
+*.a
+*.so
+*.dylib
+cmake-build-debug/
+.DS_Store

@@ -1,0 +1,11 @@
+---
+Checks: >
+  -clang-diagnostic-*,
+  readability-*,
+  -readability-magic-numbers,
+  performance-*,
+  modernize-*,
+  cppcoreguidelines-*,
+  google-readability-function-size
+WarningsAsErrors: '*'
+HeaderFilterRegex: 'src/.*'
