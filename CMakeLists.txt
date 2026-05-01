@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 project(vectorlib C)
 
 set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
 set(VECTORLIB_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 option(VECTORLIB_BUILD_TESTS "Build tests" ON)

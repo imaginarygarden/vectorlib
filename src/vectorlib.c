@@ -4,12 +4,14 @@
 #include <memory.h>
 
 #ifdef DEBUG_MODE
-    #include <stdio.h>
-    #define DEBUG_PRINT(fmt, ...) fprintf(stdout, fmt, ##__VA_ARGS__)
-    #define DEBUG_ERROR(fmt, ...) fprintf(stderr, fmt, ##__VA_ARGS__)
+
+#include <stdio.h>
+
+#define DEBUG_PRINT(fmt, ...) fprintf(stdout, fmt, ##__VA_ARGS__)
+#define DEBUG_ERROR(fmt, ...) fprintf(stderr, fmt, ##__VA_ARGS__)
 #else
-    #define DEBUG_PRINT(fmt, ...)
-    #define DEBUG_ERROR(fmt, ...)
+#define DEBUG_PRINT(fmt, ...)
+#define DEBUG_ERROR(fmt, ...)
 #endif
 
 int vector_init(vector_t *vector, size_t data_size) {
@@ -63,7 +65,8 @@ int vector_push_back(vector_t *vector, void *value) {
         void *temp = realloc(vector->data, vector->capacity * vector->data_size);
 
         if (temp == NULL) {
-            DEBUG_ERROR("[VECTORLIB] Failed to resize vector %p (%zu -> %zu)\n", vector, old_capacity, vector->capacity);
+            DEBUG_ERROR("[VECTORLIB] Failed to resize vector %p (%zu -> %zu)\n", vector, old_capacity,
+                        vector->capacity);
 
             vector->capacity /= VECTOR_GROW_CAPACITY;
 
@@ -72,12 +75,13 @@ int vector_push_back(vector_t *vector, void *value) {
 
         vector->data = temp;
 
-        memset((char *)vector->data + old_capacity * vector->data_size, 0, (vector->capacity - old_capacity) * vector->data_size);
+        memset((char *) vector->data + old_capacity * vector->data_size, 0,
+               (vector->capacity - old_capacity) * vector->data_size);
 
         DEBUG_PRINT("[VECTORLIB] Resized vector %p (%zu -> %zu)\n", vector, old_capacity, vector->capacity);
     }
 
-    memcpy((char *)vector->data + vector->size++ * vector->data_size, value, vector->data_size);
+    memcpy((char *) vector->data + vector->size++ * vector->data_size, value, vector->data_size);
 
     DEBUG_PRINT("[VECTORLIB] Pushed to vector %p with new size of %zu\n", vector, vector->size);
 
@@ -91,9 +95,9 @@ int vector_pop_back(vector_t *vector, void *output) {
         return VECTOR_RES_ERR;
     }
 
-    memcpy(output, (char *)vector->data + --vector->size * vector->data_size, vector->data_size);
+    memcpy(output, (char *) vector->data + --vector->size * vector->data_size, vector->data_size);
 
-    memset((char *)vector->data + vector->size * vector->data_size, 0, vector->data_size);
+    memset((char *) vector->data + vector->size * vector->data_size, 0, vector->data_size);
 
     if (vector->size < vector->capacity / VECTOR_SHRINK_CAPACITY) {
         size_t old_capacity = vector->capacity;
@@ -103,7 +107,8 @@ int vector_pop_back(vector_t *vector, void *output) {
         void *temp = realloc(vector->data, vector->capacity * vector->data_size);
 
         if (temp == NULL) {
-            DEBUG_ERROR("[VECTORLIB] Failed to shrink vector %p (%zu -> %zu)\n", vector, old_capacity, vector->capacity);
+            DEBUG_ERROR("[VECTORLIB] Failed to shrink vector %p (%zu -> %zu)\n", vector, old_capacity,
+                        vector->capacity);
 
             vector->capacity *= VECTOR_SHRINK_CAPACITY;
 
@@ -128,7 +133,7 @@ int vector_get(const vector_t *vector, int index, void *output) {
         return VECTOR_RES_ERR;
     }
 
-    memcpy(output, (char *)vector->data + index * vector->data_size, vector->data_size);
+    memcpy(output, (char *) vector->data + index * vector->data_size, vector->data_size);
 
     DEBUG_PRINT("[VECTORLIB] Retrieved value from vector %p at index %d\n", vector, index);
 
@@ -142,7 +147,7 @@ int vector_set(vector_t *vector, int index, void *value) {
         return VECTOR_RES_ERR;
     }
 
-    memcpy((char *)vector->data + index * vector->data_size, value, vector->data_size);
+    memcpy((char *) vector->data + index * vector->data_size, value, vector->data_size);
 
     DEBUG_PRINT("[VECTORLIB] Set value in vector %p at index %d\n", vector, index);
 

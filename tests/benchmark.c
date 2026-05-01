@@ -16,7 +16,7 @@ int main(void) {
 
     clock_t end = clock();
 
-    double time_spent = (double)(end - start) / CLOCKS_PER_SEC;
+    double time_spent = (double) (end - start) / CLOCKS_PER_SEC;
 
     printf("Push %d elements: %f seconds\n", N, time_spent);
 
