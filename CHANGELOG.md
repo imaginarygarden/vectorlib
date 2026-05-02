@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1] - Submodule integration
+
+### Added
+
+* Testing library as submodule
+* Automatic test compilation disabled
+* Submodule initialization with CMakeLists
+
 ## [0.1.0] - Initial Release
 
 ### Added
