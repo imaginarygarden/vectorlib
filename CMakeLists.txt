@@ -5,7 +5,7 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(VECTORLIB_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
-option(VECTORLIB_BUILD_TESTS "Build tests" ON)
+option(VECTORLIB_BUILD_TESTS "Build tests" OFF)
 option(VECTORLIB_BUILD_BENCHMARK "Build benchmark" OFF)
 
 add_library(vectorlib src/vectorlib.c)
