@@ -14,8 +14,13 @@ void tearDown(void) {
 /* ===================== BASIC TESTS ===================== */
 
 void test_init(void) {
-    TEST_ASSERT_EQUAL(0, vector_size(&vec));
-    TEST_ASSERT_GREATER_THAN(0, vector_capacity(&vec));
+    size_t size, capacity;
+
+    vector_size(&vec, &size);
+    vector_capacity(&vec, &capacity);
+
+    TEST_ASSERT_EQUAL(0, size);
+    TEST_ASSERT_GREATER_THAN(0, capacity);
 }
 
 void test_push_and_get(void) {
@@ -35,8 +40,11 @@ void test_pop(void) {
     int out = 0;
     vector_pop_back(&vec, &out);
 
+    size_t size;
+    vector_size(&vec, &size);
+
     TEST_ASSERT_EQUAL(10, out);
-    TEST_ASSERT_EQUAL(0, vector_size(&vec));
+    TEST_ASSERT_EQUAL(0, size);
 }
 
 void test_resize_growth(void) {
@@ -44,7 +52,11 @@ void test_resize_growth(void) {
         vector_push_back(&vec, &i);
     }
 
-    TEST_ASSERT_EQUAL(100, vector_size(&vec));
+    size_t size;
+
+    vector_size(&vec, &size);
+
+    TEST_ASSERT_EQUAL(100, size);
 }
 
 void test_set(void) {
@@ -62,7 +74,7 @@ void test_set(void) {
 
 void test_out_of_bounds(void) {
     int out;
-    TEST_ASSERT_EQUAL(VECTOR_RES_ERR, vector_get(&vec, 0, &out));
+    TEST_ASSERT_EQUAL(VECTOR_RES_ERR_BOUNDS, vector_get(&vec, 0, &out));
 }
 
 /* ===================== EXTENDED TESTS ===================== */
@@ -87,22 +99,28 @@ void test_pop_until_empty(void) {
     TEST_ASSERT_EQUAL(VECTOR_RES_OK, vector_pop_back(&vec, &out));
     TEST_ASSERT_EQUAL(1, out);
 
-    TEST_ASSERT_EQUAL(VECTOR_RES_ERR, vector_pop_back(&vec, &out));
+    TEST_ASSERT_EQUAL(VECTOR_RES_ERR_EMPTY, vector_pop_back(&vec, &out));
 }
 
 void test_capacity_growth(void) {
-    size_t initial = vector_capacity(&vec);
+    size_t initial;
+
+    vector_capacity(&vec, &initial);
 
     for (size_t i = 0; i < initial + 1; i++) {
         vector_push_back(&vec, &i);
     }
 
-    TEST_ASSERT_GREATER_THAN(initial, vector_capacity(&vec));
+    size_t capacity;
+
+    vector_capacity(&vec, &capacity);
+
+    TEST_ASSERT_GREATER_THAN(initial, capacity);
 }
 
 void test_set_out_of_bounds(void) {
     int val = 10;
-    TEST_ASSERT_EQUAL(VECTOR_RES_ERR, vector_set(&vec, 0, &val));
+    TEST_ASSERT_EQUAL(VECTOR_RES_ERR_BOUNDS, vector_set(&vec, 0, &val));
 }
 
 void test_get_last_element(void) {
@@ -139,12 +157,15 @@ void test_size_consistency(void) {
         vector_pop_back(&vec, &val);
     }
 
-    TEST_ASSERT_EQUAL(10, vector_size(&vec));
+    size_t size;
+    vector_size(&vec, &size);
+
+    TEST_ASSERT_EQUAL(10, size);
 }
 
 void test_init_zero_size(void) {
     vector_t v;
-    TEST_ASSERT_EQUAL(VECTOR_RES_ERR, vector_init(&v, 0));
+    TEST_ASSERT_EQUAL(VECTOR_RES_ERR_INVALID_SIZE, vector_init(&v, 0));
 }
 
 void test_free_resets_vector(void) {

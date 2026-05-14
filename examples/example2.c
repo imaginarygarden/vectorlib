@@ -11,7 +11,11 @@ int main(void) {
         vector_push_back(&vec, &i);
     }
 
-    for (size_t i = 0; i < vector_size(&vec); i++) {
+    size_t size;
+
+    vector_size(&vec, &size);
+
+    for (size_t i = 0; i < size; i++) {
         int value;
         vector_get(&vec, i, &value);
         printf("%d\n", value);
