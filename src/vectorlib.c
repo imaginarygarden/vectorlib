@@ -149,7 +149,7 @@ vector_result_t vector_pop_back(vector_t *restrict vector, void *restrict output
     if (vector->size < vector->capacity / VECTOR_SHRINK_LIMIT) {
         size_t old_capacity = vector->capacity;
 
-        size_t new_capacity = max(vector->capacity / VECTOR_SHRINK_CAPACITY, VECTOR_STD_CAPACITY);
+        size_t new_capacity = vector->capacity / VECTOR_SHRINK_CAPACITY < VECTOR_STD_CAPACITY ? VECTOR_STD_CAPACITY : vector->capacity / VECTOR_SHRINK_CAPACITY;
 
         void *temp = realloc(vector->data, new_capacity * vector->data_size);
 
