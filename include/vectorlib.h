@@ -7,34 +7,6 @@ extern "C" {
 
 #include <stddef.h>
 
-/**
- * @file vectorlib.h
- * @brief Generic dynamic array (vector) implementation in C.
- *
- * Provides a type-agnostic resizable array capable of storing elements of any type.
- * The user must specify the size of stored elements (in bytes) at initialization.
- *
- * @section memory Memory Model
- * - All data is stored as raw bytes in contiguous memory managed by malloc/realloc/free.
- * - Elements are copied byte-for-byte using memcpy(). No constructors/destructors are invoked.
- * - If you store pointers, only the pointer values are copied, not the pointed-to data.
- * - No alignment is guaranteed beyond what malloc provides (typically pointer-aligned).
- *
- * @section copying Data Copying Behavior
- * All functions that accept element data (push_back, set) perform deep memory copies.
- * The vector stores independent copies; modifying the original data after push has no effect.
- * Example:
- *   int x = 42;
- *   vector_push_back(&vec, &x);
- *   x = 100;  // vec still contains 42
- *
- * @section lifetime Vector Lifetime
- * Each vector must be initialized with vector_init() before use.
- * After initialization, the vector owns its allocated memory.
- * All vectors must be freed with vector_free() to prevent memory leaks.
- * Reusing an uninitialized vector is undefined behavior.
- */
-
 /** @brief Initial capacity allocated for a new vector (elements, not bytes) */
 #define VECTOR_STD_CAPACITY 5
 
@@ -74,7 +46,7 @@ typedef enum vector_result {
     /** Vector pointer is NULL or vector is uninitialized (data == NULL) */
     VECTOR_RES_ERR_INVALID_VECTOR,
 
-    /** Element size (data_size) is invalid; must be > 0 (only from vector_init) */
+    /** Element size is zero or requested capacity is less than current capacity */
     VECTOR_RES_ERR_INVALID_SIZE,
 
     /** Input data pointer is NULL where a valid pointer is required */
@@ -115,228 +87,158 @@ typedef struct vector {
 } vector_t;
 
 /**
- * @brief Initialize a vector for use.
+ * @brief Initialize a vector with a given element size.
  *
- * Allocates initial memory and prepares the vector for element storage.
- * Initial capacity is set to VECTOR_STD_CAPACITY.
- * Initial size is 0 (empty).
+ * Allocates memory for VECTOR_STD_CAPACITY elements of size @p data_size bytes each.
+ * Must be called before any other vector operations.
  *
- * @param vector
- *     Pointer to an uninitialized vector_t structure.
- *     Must not be NULL.
- * @param data_size
- *     Size (in bytes) of each element to be stored.
- *     Must be > 0. A size of 0 is rejected with VECTOR_RES_ERR_INVALID_SIZE.
+ * @param[out] vector    Pointer to uninitialized vector_t structure
+ * @param[in]  data_size Size in bytes of each element (must be > 0)
  *
- * @return
- *     - VECTOR_RES_OK: Vector ready for use.
- *     - VECTOR_RES_ERR_INVALID_VECTOR: vector parameter is NULL.
- *     - VECTOR_RES_ERR_INVALID_SIZE: data_size is 0.
- *     - VECTOR_RES_ERR_OVERFLOW: Initial allocation size would overflow SIZE_MAX.
- *     - VECTOR_RES_ERR_ALLOC: Memory allocation failed.
- *
- * @note Must be paired with vector_free() to avoid memory leaks.
- * @note Calling vector_init() on an already-initialized vector causes a memory leak.
- *
- * @example
- *   vector_t vec;
- *   if (vector_init(&vec, sizeof(int)) != VECTOR_RES_OK) {
- *       // Handle error
- *   }
+ * @return VECTOR_RES_OK on success, or error code on failure:
+ *         - VECTOR_RES_ERR_INVALID_VECTOR if vector pointer is NULL
+ *         - VECTOR_RES_ERR_INVALID_SIZE if data_size is 0
+ *         - VECTOR_RES_ERR_OVERFLOW if initial capacity exceeds SIZE_MAX
+ *         - VECTOR_RES_ERR_ALLOC if memory allocation fails
  */
 vector_result_t vector_init(vector_t*, size_t);
 
 /**
- * @brief Release all resources held by a vector.
+ * @brief Free all resources associated with a vector.
  *
- * Frees allocated memory and resets the vector structure.
- * After this call, the vector is uninitialized and must not be used
- * until re-initialized with vector_init().
+ * Deallocates the internal data buffer and resets vector structure fields.
+ * The vector_t structure itself is not freed; caller is responsible for freeing it
+ * if it was dynamically allocated.
  *
- * @param vector
- *     Pointer to an initialized vector_t.
- *     If NULL or data==NULL, returns VECTOR_RES_ERR_INVALID_VECTOR without freeing.
+ * @param[in,out] vector Pointer to initialized vector_t structure
  *
- * @return
- *     - VECTOR_RES_OK: Memory freed and vector reset.
- *     - VECTOR_RES_ERR_INVALID_VECTOR: vector is NULL or uninitialized.
- *
- * @note Safe to call on uninitialized vectors (returns error but does not crash).
- * @note After free, the vector pointer itself remains valid but the structure is unusable.
- *
- * @example
- *   vector_free(&vec);
- *   // vec is now uninitialized; do not use until vector_init() called again
+ * @return VECTOR_RES_OK on success, or error code on failure:
+ *         - VECTOR_RES_ERR_INVALID_VECTOR if vector or vector->data is NULL
  */
 vector_result_t vector_free(vector_t*);
 
 /**
- * @brief Append a copy of an element to the end.
+ * @brief Append an element to the end of the vector.
  *
- * Automatically grows capacity (doubling by default) if needed.
- * The element data is copied; the original data is not referenced.
+ * Grows capacity automatically if necessary. Capacity is multiplied by
+ * VECTOR_GROW_CAPACITY when expansion is needed.
  *
- * @param vector
- *     Pointer to an initialized vector_t.
- * @param value
- *     Pointer to element data to copy (must be valid memory of size data_size).
- *     Must not be NULL.
+ * @param[in,out] vector Pointer to initialized vector_t structure
+ * @param[in]     value  Pointer to element data to copy (must not be NULL)
  *
- * @return
- *     - VECTOR_RES_OK: Element appended; size incremented.
- *     - VECTOR_RES_ERR_INVALID_VECTOR: vector is NULL or uninitialized.
- *     - VECTOR_RES_ERR_INVALID_INPUT: value is NULL.
- *     - VECTOR_RES_ERR_OVERFLOW: Growing capacity would exceed SIZE_MAX.
- *     - VECTOR_RES_ERR_ALLOC: Memory reallocation failed (vector unchanged).
- *
- * @note Growth is automatic and transparent; user does not need to manage capacity.
- * @note If reallocation fails, the vector state is unchanged and can continue to be used.
- *
- * @example
- *   int x = 42;
- *   vector_push_back(&vec, &x);
+ * @return VECTOR_RES_OK on success, or error code on failure:
+ *         - VECTOR_RES_ERR_INVALID_VECTOR if vector or vector->data is NULL
+ *         - VECTOR_RES_ERR_INVALID_INPUT if value pointer is NULL
+ *         - VECTOR_RES_ERR_OVERFLOW if new capacity would exceed SIZE_MAX
+ *         - VECTOR_RES_ERR_ALLOC if memory reallocation fails
  */
 vector_result_t vector_push_back(vector_t*, const void*);
 
 /**
- * @brief Remove and optionally retrieve the last element.
+ * @brief Remove and optionally retrieve the last element from the vector.
  *
- * Decrements size by 1. If size becomes smaller than capacity/VECTOR_SHRINK_LIMIT,
- * capacity is reduced by dividing by VECTOR_SHRINK_CAPACITY to save memory.
- * Shrinking failure does not prevent the pop operation from succeeding.
+ * Decrements size. Automatically shrinks capacity if size falls below
+ * capacity / VECTOR_SHRINK_LIMIT. Shrinkage does not reduce capacity below
+ * VECTOR_STD_CAPACITY.
  *
- * @param vector
- *     Pointer to an initialized vector_t.
- * @param output
- *     Optional pointer to store the removed element (size data_size bytes).
- *     If NULL, the removed element is discarded without error.
- *     If not NULL, must point to valid writable memory of size data_size.
+ * @param[in,out] vector Pointer to initialized vector_t structure
+ * @param[out]    output Pointer to buffer receiving element data, or NULL to discard
  *
- * @return
- *     - VECTOR_RES_OK: Element removed; size decremented.
- *     - VECTOR_RES_ERR_INVALID_VECTOR: vector is NULL or uninitialized.
- *     - VECTOR_RES_ERR_EMPTY: size is already 0; nothing to remove.
- *     - VECTOR_RES_ERR_ALLOC: Shrinking failed (pop still succeeds; capacity unchanged).
- *
- * @note output==NULL is allowed; the removed element is simply discarded.
- * @note Even if shrinking fails, the pop succeeds and size is decremented.
- *
- * @example
- *   int x;
- *   if (vector_pop_back(&vec, &x) == VECTOR_RES_OK) {
- *       printf("Removed: %d\n", x);
- *   }
- *
- *   // Or discard the value:
- *   vector_pop_back(&vec, NULL);
+ * @return VECTOR_RES_OK on success, or error code on failure:
+ *         - VECTOR_RES_ERR_INVALID_VECTOR if vector or vector->data is NULL
+ *         - VECTOR_RES_ERR_EMPTY if vector size is 0
+ *         - VECTOR_RES_ERR_ALLOC if memory reallocation (shrinking) fails
  */
 vector_result_t vector_pop_back(vector_t*, void*);
 
 /**
- * @brief Retrieve a copy of an element at a given index.
+ * @brief Retrieve an element from the vector without removing it.
  *
- * The element is copied to the output pointer; the vector retains its copy.
+ * Copies the element at @p index to the memory pointed to by @p output.
  *
- * @param vector
- *     Pointer to an initialized vector_t.
- * @param index
- *     0-based index of the element to retrieve.
- *     Must be < size.
- * @param output
- *     Pointer to memory where the element will be copied (size data_size bytes).
- *     Must not be NULL and must point to valid writable memory.
+ * @param[in]  vector Pointer to initialized vector_t structure
+ * @param[in]  index  Index of element (0-based, must be < size)
+ * @param[out] output Pointer to buffer receiving element data (must not be NULL)
  *
- * @return
- *     - VECTOR_RES_OK: Element copied to output.
- *     - VECTOR_RES_ERR_INVALID_VECTOR: vector is NULL or uninitialized.
- *     - VECTOR_RES_ERR_BOUNDS: index >= size.
- *     - VECTOR_RES_ERR_INVALID_OUTPUT: output is NULL.
- *
- * @note output is required (cannot be NULL); if you don't need the value, don't call this.
- *
- * @example
- *   int x;
- *   if (vector_get(&vec, 0, &x) == VECTOR_RES_OK) {
- *       printf("First element: %d\n", x);
- *   }
+ * @return VECTOR_RES_OK on success, or error code on failure:
+ *         - VECTOR_RES_ERR_INVALID_VECTOR if vector or vector->data is NULL
+ *         - VECTOR_RES_ERR_BOUNDS if index >= size
+ *         - VECTOR_RES_ERR_INVALID_OUTPUT if output pointer is NULL
  */
 vector_result_t vector_get(const vector_t*, size_t, void*);
 
 /**
- * @brief Replace an element at a given index with a new value.
+ * @brief Replace an element in the vector.
  *
- * Overwrites the element at index with a copy of the provided value.
- * Does not change size or capacity.
+ * Overwrites the element at @p index with a copy of the data pointed to by @p value.
  *
- * @param vector
- *     Pointer to an initialized vector_t.
- * @param index
- *     0-based index of the element to replace.
- *     Must be < size.
- * @param value
- *     Pointer to new element data to copy (must be valid memory of size data_size).
- *     Must not be NULL.
+ * @param[in,out] vector Pointer to initialized vector_t structure
+ * @param[in]     index  Index of element (0-based, must be < size)
+ * @param[in]     value  Pointer to new element data (must not be NULL)
  *
- * @return
- *     - VECTOR_RES_OK: Element replaced.
- *     - VECTOR_RES_ERR_INVALID_VECTOR: vector is NULL or uninitialized.
- *     - VECTOR_RES_ERR_BOUNDS: index >= size.
- *     - VECTOR_RES_ERR_INVALID_INPUT: value is NULL.
- *
- * @note This function does not grow the vector; index must be valid.
- *       Use vector_push_back() to add new elements at the end.
- *
- * @example
- *   int new_val = 99;
- *   vector_set(&vec, 0, &new_val);
+ * @return VECTOR_RES_OK on success, or error code on failure:
+ *         - VECTOR_RES_ERR_INVALID_VECTOR if vector or vector->data is NULL
+ *         - VECTOR_RES_ERR_BOUNDS if index >= size
+ *         - VECTOR_RES_ERR_INVALID_INPUT if value pointer is NULL
  */
 vector_result_t vector_set(vector_t*, size_t, const void*);
 
 /**
- * @brief Query the current allocated capacity.
+ * @brief Remove all elements from the vector without deallocating memory.
  *
- * Returns the number of elements for which space is currently allocated.
- * This is always >= size.
+ * Sets size to 0 but leaves capacity unchanged. Does not shrink the buffer.
+ * Call vector_free() then vector_init() to reset capacity.
  *
- * @param vector
- *     Pointer to an initialized vector_t.
- * @param output
- *     Pointer to size_t where capacity will be stored.
- *     Must not be NULL.
+ * @param[in,out] vector Pointer to initialized vector_t structure
  *
- * @return
- *     - VECTOR_RES_OK: Capacity copied to output.
- *     - VECTOR_RES_ERR_INVALID_VECTOR: vector is NULL or uninitialized.
- *     - VECTOR_RES_ERR_INVALID_OUTPUT: output is NULL.
+ * @return VECTOR_RES_OK on success, or error code on failure:
+ *         - VECTOR_RES_ERR_INVALID_VECTOR if vector or vector->data is NULL
+ */
+vector_result_t vector_clear(vector_t*);
+
+/**
+ * @brief Increase the capacity of the vector.
  *
- * @example
- *   size_t cap;
- *   vector_capacity(&vec, &cap);
- *   printf("Capacity: %zu\n", cap);
+ * Reserves space for at least @p value additional elements beyond current capacity.
+ * New capacity = old capacity + value. Does nothing if requested capacity is
+ * less than or equal to current capacity (returns error).
+ *
+ * @param[in,out] vector Pointer to initialized vector_t structure
+ * @param[in]     value  Number of additional elements to reserve (must result in capacity > current capacity)
+ *
+ * @return VECTOR_RES_OK on success, or error code on failure:
+ *         - VECTOR_RES_ERR_INVALID_VECTOR if vector or vector->data is NULL
+ *         - VECTOR_RES_ERR_INVALID_SIZE if value <= (capacity - current capacity)
+ *         - VECTOR_RES_ERR_OVERFLOW if new capacity would exceed SIZE_MAX
+ *         - VECTOR_RES_ERR_ALLOC if memory reallocation fails
+ */
+vector_result_t vector_reserve(vector_t*, size_t);
+
+/**
+ * @brief Query the allocated capacity of a vector.
+ *
+ * Returns the number of elements the vector can hold without reallocation.
+ *
+ * @param[in]  vector Pointer to initialized vector_t structure
+ * @param[out] output Pointer to size_t variable receiving capacity (must not be NULL)
+ *
+ * @return VECTOR_RES_OK on success, or error code on failure:
+ *         - VECTOR_RES_ERR_INVALID_VECTOR if vector or vector->data is NULL
+ *         - VECTOR_RES_ERR_INVALID_OUTPUT if output pointer is NULL
  */
 vector_result_t vector_capacity(const vector_t*, size_t*);
 
 /**
- * @brief Query the current number of stored elements.
+ * @brief Query the current size of a vector.
  *
- * Returns the number of elements currently in the vector.
- * Valid indices are 0 to size-1.
+ * Returns the number of elements currently stored in the vector.
  *
- * @param vector
- *     Pointer to an initialized vector_t.
- * @param output
- *     Pointer to size_t where size will be stored.
- *     Must not be NULL.
+ * @param[in]  vector Pointer to initialized vector_t structure
+ * @param[out] output Pointer to size_t variable receiving size (must not be NULL)
  *
- * @return
- *     - VECTOR_RES_OK: Size copied to output.
- *     - VECTOR_RES_ERR_INVALID_VECTOR: vector is NULL or uninitialized.
- *     - VECTOR_RES_ERR_INVALID_OUTPUT: output is NULL.
- *
- * @example
- *   size_t sz;
- *   vector_size(&vec, &sz);
- *   printf("Elements stored: %zu\n", sz);
+ * @return VECTOR_RES_OK on success, or error code on failure:
+ *         - VECTOR_RES_ERR_INVALID_VECTOR if vector or vector->data is NULL
+ *         - VECTOR_RES_ERR_INVALID_OUTPUT if output pointer is NULL
  */
 vector_result_t vector_size(const vector_t*, size_t*);
 
