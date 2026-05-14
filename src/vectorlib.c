@@ -18,7 +18,7 @@ extern "C" {
 #define DEBUG_ERROR(fmt, ...)
 #endif
 
-vector_result_t vector_init(vector_t *restrict vector, size_t data_size) {
+vector_result_t vector_init(vector_t *restrict vector, const size_t data_size) {
     if (data_size == 0) {
         DEBUG_ERROR("[VECTORLIB] Failed to initialize vector %p due to invalid data size of %zu\n", vector, data_size);
 
@@ -92,33 +92,20 @@ vector_result_t vector_push_back(vector_t *restrict vector, const void *restrict
     }
 
     if (vector->size >= vector->capacity) {
-        size_t old_capacity = vector->capacity;
-
-        size_t new_capacity = vector->capacity * VECTOR_GROW_CAPACITY;
-
-        if (vector->capacity > SIZE_MAX / VECTOR_GROW_CAPACITY || new_capacity > SIZE_MAX / vector->data_size) {
-            DEBUG_ERROR("[VECTORLIB] Failed to resize vector %p due to capacity overflow\n", vector);
+        if (VECTOR_CHECK_OVERFLOW(vector->capacity, VECTOR_GROW_FACTOR)) {
+            DEBUG_ERROR("[VECTORLIB] Failed to resize_result vector %p due to capacity overflow\n", vector);
 
             return VECTOR_RES_ERR_OVERFLOW;
         }
 
-        void *temp = realloc(vector->data, new_capacity * vector->data_size);
+        vector_result_t resize_result = vector_reserve(vector, vector->capacity * VECTOR_GROW_FACTOR);
 
-        if (temp == NULL) {
-            DEBUG_ERROR("[VECTORLIB] Failed to resize vector %p (%zu -> %zu)\n", vector, old_capacity,
-                        new_capacity);
-
-            return VECTOR_RES_ERR_ALLOC;
+        if (resize_result != VECTOR_RES_OK) {
+            return resize_result;
         }
-
-        vector->capacity = new_capacity;
-
-        vector->data = temp;
-
-        DEBUG_PRINT("[VECTORLIB] Resized vector %p (%zu -> %zu)\n", vector, old_capacity, vector->capacity);
     }
 
-    memcpy((char *) vector->data + (vector->size++ * vector->data_size), value, vector->data_size);
+    memcpy(VECTOR_GET_ADDRESS(vector->data, vector->data_size, vector->size++), value, vector->data_size);
 
     DEBUG_PRINT("[VECTORLIB] Pushed to vector %p with new size of %zu\n", vector, vector->size);
 
@@ -132,7 +119,7 @@ vector_result_t vector_pop_back(vector_t *restrict vector, void *restrict output
         return VECTOR_RES_ERR_INVALID_VECTOR;
     }
 
-    if (vector->size <= 0) {
+    if (vector->size == 0) {
         DEBUG_ERROR("[VECTORLIB] Failed to pop from vector %p due to empty content\n", vector);
 
         return VECTOR_RES_ERR_EMPTY;
@@ -143,28 +130,15 @@ vector_result_t vector_pop_back(vector_t *restrict vector, void *restrict output
     if (output != NULL) {
         DEBUG_PRINT("[VECTORLIB] Popped value from vector %p was copied to output parameter\n", vector);
 
-        memcpy(output, (char *) vector->data + (vector->size * vector->data_size), vector->data_size);
+        memcpy(output, VECTOR_GET_ADDRESS(vector->data, vector->data_size, vector->size), vector->data_size);
     }
 
     if (vector->size < vector->capacity / VECTOR_SHRINK_LIMIT) {
-        size_t old_capacity = vector->capacity;
+        vector_result_t shrink_result = vector_shrink(vector, vector->capacity / VECTOR_SHRINK_FACTOR);
 
-        size_t new_capacity = vector->capacity / VECTOR_SHRINK_CAPACITY < VECTOR_STD_CAPACITY ? VECTOR_STD_CAPACITY : vector->capacity / VECTOR_SHRINK_CAPACITY;
-
-        void *temp = realloc(vector->data, new_capacity * vector->data_size);
-
-        if (temp == NULL) {
-            DEBUG_ERROR("[VECTORLIB] Failed to shrink vector %p (%zu -> %zu)\n", vector, old_capacity,
-                        new_capacity);
-
-            return VECTOR_RES_ERR_ALLOC;
+        if (shrink_result != VECTOR_RES_OK) {
+            return shrink_result;
         }
-
-        vector->capacity = new_capacity;
-
-        vector->data = temp;
-
-        DEBUG_PRINT("[VECTORLIB] Shrank vector %p (%zu -> %zu)\n", vector, old_capacity, vector->capacity);
     }
 
     DEBUG_PRINT("[VECTORLIB] Popped from vector %p with new size of %zu\n", vector, vector->size);
@@ -172,7 +146,7 @@ vector_result_t vector_pop_back(vector_t *restrict vector, void *restrict output
     return VECTOR_RES_OK;
 }
 
-vector_result_t vector_get(const vector_t *restrict vector, size_t index, void *restrict output) {
+vector_result_t vector_get(const vector_t *restrict vector, const size_t index, void *restrict output) {
     if (vector == NULL || vector->data == NULL) {
         DEBUG_ERROR("[VECTORLIB] Failed to retrieve value from uninitialized vector %p\n", vector);
 
@@ -191,14 +165,14 @@ vector_result_t vector_get(const vector_t *restrict vector, size_t index, void *
         return VECTOR_RES_ERR_INVALID_OUTPUT;
     }
 
-    memcpy(output, (char *) vector->data + (index * vector->data_size), vector->data_size);
+    memcpy(output, VECTOR_GET_ADDRESS(vector->data, vector->data_size, index), vector->data_size);
 
     DEBUG_PRINT("[VECTORLIB] Retrieved value from vector %p at index %zu\n", vector, index);
 
     return VECTOR_RES_OK;
 }
 
-vector_result_t vector_set(vector_t *restrict vector, size_t index, const void *restrict value) {
+vector_result_t vector_set(vector_t *restrict vector, const size_t index, const void *restrict value) {
     if (vector == NULL || vector->data == NULL) {
         DEBUG_ERROR("[VECTORLIB] Failed to set value in uninitialized vector %p\n", vector);
 
@@ -217,14 +191,14 @@ vector_result_t vector_set(vector_t *restrict vector, size_t index, const void *
         return VECTOR_RES_ERR_INVALID_INPUT;
     }
 
-    memcpy((char *) vector->data + (index * vector->data_size), value, vector->data_size);
+    memcpy(VECTOR_GET_ADDRESS(vector->data, vector->data_size, index), value, vector->data_size);
 
     DEBUG_PRINT("[VECTORLIB] Set value in vector %p at index %zu\n", vector, index);
 
     return VECTOR_RES_OK;
 }
 
-vector_result_t vector_clear(vector_t *vector) {
+vector_result_t vector_clear(vector_t *restrict vector) {
     if (vector == NULL || vector->data == NULL) {
         DEBUG_ERROR("[VECTORLIB] Failed to clear uninitialized vector %p\n", vector);
 
@@ -238,7 +212,7 @@ vector_result_t vector_clear(vector_t *vector) {
     return VECTOR_RES_OK;
 }
 
-vector_result_t vector_reserve(vector_t *vector, size_t value) {
+vector_result_t vector_reserve(vector_t *restrict vector, const size_t value) {
     if (vector == NULL || vector->data == NULL) {
         DEBUG_ERROR("[VECTORLIB] Failed to resize uninitialized vector %p\n", vector);
 
@@ -252,6 +226,7 @@ vector_result_t vector_reserve(vector_t *vector, size_t value) {
     }
 
     size_t old_capacity = vector->capacity;
+
     size_t new_capacity = value;
 
     if (new_capacity > SIZE_MAX / vector->data_size) {
@@ -274,6 +249,41 @@ vector_result_t vector_reserve(vector_t *vector, size_t value) {
     vector->data = temp;
 
     DEBUG_PRINT("[VECTORLIB] Resized vector %p (%zu -> %zu)\n", vector, old_capacity, vector->capacity);
+
+    return VECTOR_RES_OK;
+}
+
+vector_result_t vector_shrink(vector_t *restrict vector, const size_t value) {
+    if (vector == NULL || vector->data == NULL) {
+        DEBUG_ERROR("[VECTORLIB] Failed to resize uninitialized vector %p\n", vector);
+
+        return VECTOR_RES_ERR_INVALID_VECTOR;
+    }
+
+    if (value >= vector->capacity || value < vector->size) {
+        DEBUG_ERROR("[VECTORLIB] Failed to resize vector %p due to invalid size\n", vector);
+
+        return VECTOR_RES_ERR_INVALID_SIZE;
+    }
+
+    size_t old_capacity = vector->capacity;
+
+    size_t new_capacity = VECTOR_CLAMP_CAPACITY(value);
+
+    void *temp = realloc(vector->data, new_capacity * vector->data_size);
+
+    if (temp == NULL) {
+        DEBUG_ERROR("[VECTORLIB] Failed to shrink vector %p (%zu -> %zu)\n", vector, old_capacity,
+                    new_capacity);
+
+        return VECTOR_RES_ERR_ALLOC;
+    }
+
+    vector->capacity = new_capacity;
+
+    vector->data = temp;
+
+    DEBUG_PRINT("[VECTORLIB] Shrank vector %p (%zu -> %zu)\n", vector, old_capacity, new_capacity);
 
     return VECTOR_RES_OK;
 }

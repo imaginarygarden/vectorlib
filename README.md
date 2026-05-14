@@ -101,8 +101,8 @@ cmake --build build
 | Macro                    | Description      | Default |
 | ------------------------ | ---------------- | ------- |
 | `VECTOR_STD_CAPACITY`    | Initial capacity | 5       |
-| `VECTOR_GROW_CAPACITY`   | Growth factor    | 2       |
-| `VECTOR_SHRINK_CAPACITY` | Shrink factor    | 2       |
+| `VECTOR_GROW_FACTOR`   | Growth factor    | 2       |
+| `VECTOR_SHRINK_FACTOR` | Shrink factor    | 2       |
 
 ---
 

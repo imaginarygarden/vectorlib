@@ -13,6 +13,155 @@ void tearDown(void) {
 
 /* ===================== BASIC TESTS ===================== */
 
+void test_init_null_vector(void) {
+    TEST_ASSERT_EQUAL(
+        VECTOR_RES_ERR_INVALID_VECTOR,
+        vector_init(NULL, sizeof(int))
+    );
+}
+
+void test_free_null_vector(void) {
+    TEST_ASSERT_EQUAL(
+        VECTOR_RES_ERR_INVALID_VECTOR,
+        vector_free(NULL)
+    );
+}
+
+void test_push_null_input(void) {
+    TEST_ASSERT_EQUAL(
+        VECTOR_RES_ERR_INVALID_INPUT,
+        vector_push_back(&vec, NULL)
+    );
+}
+
+void test_get_null_output(void) {
+    int val = 1;
+    vector_push_back(&vec, &val);
+
+    TEST_ASSERT_EQUAL(
+        VECTOR_RES_ERR_INVALID_OUTPUT,
+        vector_get(&vec, 0, NULL)
+    );
+}
+
+void test_set_null_input(void) {
+    int val = 1;
+    vector_push_back(&vec, &val);
+
+    TEST_ASSERT_EQUAL(
+        VECTOR_RES_ERR_INVALID_INPUT,
+        vector_set(&vec, 0, NULL)
+    );
+}
+
+void test_capacity_null_output(void) {
+    TEST_ASSERT_EQUAL(
+        VECTOR_RES_ERR_INVALID_OUTPUT,
+        vector_capacity(&vec, NULL)
+    );
+}
+
+void test_size_null_output(void) {
+    TEST_ASSERT_EQUAL(
+        VECTOR_RES_ERR_INVALID_OUTPUT,
+        vector_size(&vec, NULL)
+    );
+}
+
+void test_clear_keeps_capacity(void) {
+    size_t before;
+
+    vector_capacity(&vec, &before);
+
+    for (int i = 0; i < 20; i++) {
+        vector_push_back(&vec, &i);
+    }
+
+    vector_clear(&vec);
+
+    size_t size, after;
+
+    vector_size(&vec, &size);
+    vector_capacity(&vec, &after);
+
+    TEST_ASSERT_EQUAL(0, size);
+    TEST_ASSERT_GREATER_OR_EQUAL(before, after);
+}
+
+void test_reserve_growth(void) {
+    TEST_ASSERT_EQUAL(
+        VECTOR_RES_OK,
+        vector_reserve(&vec, 100)
+    );
+
+    size_t capacity;
+    vector_capacity(&vec, &capacity);
+
+    TEST_ASSERT_EQUAL(100, capacity);
+}
+
+void test_reserve_smaller_capacity(void) {
+    size_t capacity;
+    vector_capacity(&vec, &capacity);
+
+    TEST_ASSERT_EQUAL(
+        VECTOR_RES_ERR_INVALID_SIZE,
+        vector_reserve(&vec, capacity - 1)
+    );
+}
+
+void test_shrink_capacity(void) {
+    vector_reserve(&vec, 100);
+
+    TEST_ASSERT_EQUAL(
+        VECTOR_RES_OK,
+        vector_shrink(&vec, 50)
+    );
+
+    size_t capacity;
+    vector_capacity(&vec, &capacity);
+
+    TEST_ASSERT_EQUAL(50, capacity);
+}
+
+void test_shrink_clamps_to_std_capacity(void) {
+    vector_reserve(&vec, 100);
+
+    vector_shrink(&vec, 1);
+
+    size_t capacity;
+    vector_capacity(&vec, &capacity);
+
+    TEST_ASSERT_EQUAL(VECTOR_STD_CAPACITY, capacity);
+}
+
+void test_pop_without_output(void) {
+    int val = 10;
+
+    vector_push_back(&vec, &val);
+
+    TEST_ASSERT_EQUAL(
+        VECTOR_RES_OK,
+        vector_pop_back(&vec, NULL)
+    );
+
+    size_t size;
+    vector_size(&vec, &size);
+
+    TEST_ASSERT_EQUAL(0, size);
+}
+
+void test_shrink_below_size_fails(void) {
+    for (int i = 0; i < 10; i++) {
+        vector_push_back(&vec, &i);
+    }
+
+    TEST_ASSERT_EQUAL(
+        VECTOR_RES_ERR_INVALID_SIZE,
+        vector_shrink(&vec, 5)
+    );
+}
+
 void test_init(void) {
     size_t size, capacity;
 

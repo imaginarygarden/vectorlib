@@ -45,7 +45,7 @@ size >= capacity
 New capacity:
 
 ```
-capacity *= VECTOR_GROW_CAPACITY
+capacity *= VECTOR_GROW_FACTOR
 ```
 
 ---
@@ -55,13 +55,13 @@ capacity *= VECTOR_GROW_CAPACITY
 Triggered when:
 
 ```
-size < capacity / VECTOR_SHRINK_CAPACITY
+size < capacity / VECTOR_SHRINK_FACTOR
 ```
 
 New capacity:
 
 ```
-capacity /= VECTOR_SHRINK_CAPACITY
+capacity /= VECTOR_SHRINK_FACTOR
 ```
 
 ---
