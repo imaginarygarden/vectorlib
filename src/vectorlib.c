@@ -324,15 +324,20 @@ vector_result_t vector_remove(vector_t *restrict vector, const size_t index, con
 
         memcpy(buffer.data, VECTOR_GET_ADDRESS(vector, index), vector->data_size * amount);
 
-        vector_result_t free_result = vector_free(output);
+        buffer.size = amount;
 
-        if (free_result != VECTOR_RES_OK) {
-            return free_result;
+        if (output->data != NULL) {
+            vector_free(output);
         }
 
         DEBUG_PRINT("[VECTORLIB] Removed values from vector %p were copied to output parameter\n", vector);
 
-        *output = buffer;
+        output->data = buffer.data;
+        output->size = buffer.size;
+        output->capacity = buffer.capacity;
+        output->data_size = buffer.data_size;
+
+        buffer.data = NULL;
     }
 
     if (index + amount < vector->size) {
