@@ -2,7 +2,7 @@
 #include <time.h>
 #include "vectorlib.h"
 
-#define N 1000000
+#define N 1'000'000
 
 int main(void) {
     vector_t vec;
