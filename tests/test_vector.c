@@ -313,7 +313,7 @@ void test_clear_keeps_capacity(void) {
     vector_capacity(&vec, &after);
 
     TEST_ASSERT_EQUAL(0, size);
-    TEST_ASSERT_GREATER_OR_EQUAL(after, before);
+    TEST_ASSERT_GREATER_OR_EQUAL(before, after);
 }
 
 void test_clear_empty_vector(void) {

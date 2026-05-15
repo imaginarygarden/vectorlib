@@ -324,12 +324,10 @@ vector_result_t vector_remove(vector_t *restrict vector, const size_t index, con
 
         memcpy(buffer.data, VECTOR_GET_ADDRESS(vector, index), vector->data_size * amount);
 
-        if (output->data != NULL) {
-            vector_result_t free_result = vector_free(output);
+        vector_result_t free_result = vector_free(output);
 
-            if (free_result != VECTOR_RES_OK) {
-                return free_result;
-            }
+        if (free_result != VECTOR_RES_OK) {
+            return free_result;
         }
 
         DEBUG_PRINT("[VECTORLIB] Removed values from vector %p were copied to output parameter\n", vector);
@@ -371,7 +369,7 @@ vector_result_t vector_insert(vector_t *restrict vector, const size_t index, con
         }
     }
 
-    if (index >= vector->size) {
+    if (index > vector->size) {
         DEBUG_ERROR("[VECTORLIB] Failed to insert into vector %p out of bounds\n", vector);
 
         return VECTOR_RES_ERR_BOUNDS;
