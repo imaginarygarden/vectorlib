@@ -396,24 +396,15 @@ vector_result_t vector_shrink(vector_t*, const size_t);
  * @brief Removes a contiguous range of elements from the vector
  *
  * Removes amount elements starting at index, shifting remaining elements left.
- * If output is provided (non-NULL), removed elements are copied into a new vector.
- * If output->data is already allocated, it will be freed before assignment.
  *
  * @param vector Pointer to initialized vector_t struct
  * @param index Zero-based starting index of elements to remove (must be < size)
  * @param amount Number of elements to remove (index + amount must be <= size)
- * @param output Pointer to vector_t struct to receive removed elements (may be NULL)
  *
  * @return VECTOR_RES_OK on success
  * @return VECTOR_RES_ERR_INVALID_VECTOR if vector is uninitialized
  * @return VECTOR_RES_ERR_BOUNDS if index + amount > vector size
- * @return VECTOR_RES_ERR_INVALID_SIZE if output initialization fails
- * @return VECTOR_RES_ERR_ALLOC if memory allocation for output fails
  *
- * @note If output is NULL, removed elements are discarded
- * @note If output is provided, it receives a new initialized vector with removed elements
- * @note output vector must be freed by caller when no longer needed
- * @note If output->data is already allocated, existing vector will be freed
  * @note Size decreases by amount; capacity may remain unchanged
  * @note Time complexity: O(n) where n = number of elements after removed range
  *
@@ -423,7 +414,7 @@ vector_result_t vector_shrink(vector_t*, const size_t);
  *   vector_remove(&vec, 0, 1, NULL);      // Remove 1 element at index 0, discard it
  *   vector_free(&removed);
  */
-vector_result_t vector_remove(vector_t*, const size_t, const size_t, vector_t*);
+vector_result_t vector_remove(vector_t*, const size_t, const size_t);
 
 /**
  * @brief Inserts an element at the specified index

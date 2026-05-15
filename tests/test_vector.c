@@ -68,8 +68,7 @@ void test_insert_null_vector(void) {
 
 void test_remove_null_vector(void) {
     vector_t null_vec = {0};
-    vector_t output = {0};
-    TEST_ASSERT_EQUAL(VECTOR_RES_ERR_INVALID_VECTOR, vector_remove(&null_vec, 0, 1, &output));
+    TEST_ASSERT_EQUAL(VECTOR_RES_ERR_INVALID_VECTOR, vector_remove(&null_vec, 0, 1));
 }
 
 void test_capacity_null_vector(void) {
@@ -622,23 +621,15 @@ void test_remove_single(void) {
         vector_push_back(&vec, &i);
     }
 
-    vector_t removed;
-    vector_init(&removed, sizeof(int));
-
     TEST_ASSERT_EQUAL(
         VECTOR_RES_OK,
-        vector_remove(&vec, 2, 1, &removed)
+        vector_remove(&vec, 2, 1)
     );
 
     int out;
 
-    vector_get(&removed, 0, &out);
-    TEST_ASSERT_EQUAL(2, out);
-
     vector_get(&vec, 2, &out);
     TEST_ASSERT_EQUAL(3, out);
-
-    vector_free(&removed);
 }
 
 void test_remove_range(void) {
@@ -646,52 +637,29 @@ void test_remove_range(void) {
         vector_push_back(&vec, &i);
     }
 
-    vector_t removed;
-    vector_init(&removed, sizeof(int));
-
     TEST_ASSERT_EQUAL(
         VECTOR_RES_OK,
-        vector_remove(&vec, 3, 4, &removed)
+        vector_remove(&vec, 3, 4)
     );
 
     size_t size;
 
     vector_size(&vec, &size);
     TEST_ASSERT_EQUAL(6, size);
-
-    int out;
-
-    vector_get(&removed, 0, &out);
-    TEST_ASSERT_EQUAL(3, out);
-
-    vector_get(&removed, 3, &out);
-    TEST_ASSERT_EQUAL(6, out);
-
-    vector_free(&removed);
 }
 
 void test_remove_out_of_bounds(void) {
-    vector_t removed;
-    vector_init(&removed, sizeof(int));
-
     TEST_ASSERT_EQUAL(
         VECTOR_RES_ERR_BOUNDS,
-        vector_remove(&vec, 0, 1, &removed)
+        vector_remove(&vec, 0, 1)
     );
-
-    vector_free(&removed);
 }
 
 void test_remove_zero_count(void) {
-    vector_t removed;
-    vector_init(&removed, sizeof(int));
-
     TEST_ASSERT_EQUAL(
         VECTOR_RES_ERR_INVALID_SIZE,
-        vector_remove(&vec, 0, 0, &removed)
+        vector_remove(&vec, 0, 0)
     );
-
-    vector_free(&removed);
 }
 
 /* ===================== CAPACITY EDGE TESTS ===================== */

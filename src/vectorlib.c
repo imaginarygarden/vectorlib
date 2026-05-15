@@ -288,7 +288,7 @@ vector_result_t vector_shrink(vector_t *restrict vector, const size_t value) {
     return VECTOR_RES_OK;
 }
 
-vector_result_t vector_remove(vector_t *restrict vector, const size_t index, const size_t amount, vector_t *restrict output) {
+vector_result_t vector_remove(vector_t *restrict vector, const size_t index, const size_t amount) {
     if (vector == NULL || vector->data == NULL) {
         DEBUG_ERROR("[VECTORLIB] Failed to remove from uninitialized vector %p\n", vector);
 
@@ -299,45 +299,6 @@ vector_result_t vector_remove(vector_t *restrict vector, const size_t index, con
         DEBUG_ERROR("[VECTORLIB] Failed to remove from vector %p out of bounds\n", vector);
 
         return VECTOR_RES_ERR_BOUNDS;
-    }
-
-    if (output != NULL) {
-        vector_t buffer;
-
-        vector_result_t init_result = vector_init(&buffer, vector->data_size);
-
-        if (init_result != VECTOR_RES_OK) {
-            return init_result;
-        }
-
-        vector_result_t reserve_result = vector_reserve(&buffer, amount);
-
-        if (reserve_result != VECTOR_RES_OK) {
-            vector_result_t free_result = vector_free(&buffer);
-
-            if (free_result != VECTOR_RES_OK) {
-                return free_result;
-            }
-
-            return reserve_result;
-        }
-
-        memcpy(buffer.data, VECTOR_GET_ADDRESS(vector, index), vector->data_size * amount);
-
-        buffer.size = amount;
-
-        if (output->data != NULL) {
-            vector_free(output);
-        }
-
-        DEBUG_PRINT("[VECTORLIB] Removed values from vector %p were copied to output parameter\n", vector);
-
-        output->data = buffer.data;
-        output->size = buffer.size;
-        output->capacity = buffer.capacity;
-        output->data_size = buffer.data_size;
-
-        buffer.data = NULL;
     }
 
     if (index + amount < vector->size) {
