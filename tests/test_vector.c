@@ -670,7 +670,7 @@ void test_reserve_same_capacity(void) {
     vector_capacity(&vec, &cap);
 
     TEST_ASSERT_EQUAL(
-        VECTOR_RES_OK,
+        VECTOR_RES_ERR_INVALID_SIZE,
         vector_reserve(&vec, cap)
     );
 }
@@ -681,7 +681,7 @@ void test_shrink_exact_size(void) {
     }
 
     TEST_ASSERT_EQUAL(
-        VECTOR_RES_OK,
+        VECTOR_RES_ERR_INVALID_SIZE,
         vector_shrink(&vec, 10)
     );
 

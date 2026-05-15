@@ -295,6 +295,12 @@ vector_result_t vector_remove(vector_t *restrict vector, const size_t index, con
         return VECTOR_RES_ERR_INVALID_VECTOR;
     }
 
+    if (amount < 1) {
+        DEBUG_ERROR("[VECTORLIB] Failed to remove from vector %p due to invalid amount\n", vector);
+
+        return VECTOR_RES_ERR_INVALID_SIZE;
+    }
+
     if (index + amount > vector->size) {
         DEBUG_ERROR("[VECTORLIB] Failed to remove from vector %p out of bounds\n", vector);
 
